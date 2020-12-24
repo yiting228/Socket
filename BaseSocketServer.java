@@ -1,16 +1,18 @@
 package connect.base;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class BaseSocketServer {
+public class BaseSocketServer extends Thread {
+
 	private ServerSocket server;
 	private Socket socket;
 	private int port;
-	private InputStream inputStream;
-
 
 	public int getPort() {
 		return port;
@@ -25,19 +27,83 @@ public class BaseSocketServer {
 	}
 
 	public void runServerSingle() throws IOException {
+
+		ExecutorService threadExecutor = Executors.newCachedThreadPool();
 		this.server = new ServerSocket(this.port);
 		System.out.println("base socket server started.");
-		// the code will block here till the request come.
-		this.socket = server.accept();
-		this.inputStream = this.socket.getInputStream();
-		Scanner sc = new Scanner(this.inputStream);
-		while (sc.hasNextLine()) {
-			System.out.println("get info from client: " + sc.nextLine());
-		} 
-		inputStream.close();
-		socket.close();
-		server.close();
-		System.out.println("exit");
+
+		while (true) {
+			this.socket = server.accept();
+			threadExecutor.execute(new InputThread(socket));
+			threadExecutor.execute(new OutputThread(socket));
+		}
+
+	}
+
+	class InputThread implements Runnable {
+		private Socket clientSocket;
+
+		public InputThread(Socket clientSocket) {
+			this.clientSocket = clientSocket;
+		}
+
+		public void run() {
+			InputStream inputStream = null;
+			try {
+				inputStream = clientSocket.getInputStream();
+				String addr = clientSocket.getLocalAddress().toString();
+				System.out.println("[" + addr + "]Knock!Knock!");
+				Scanner sc = new Scanner(inputStream);
+				while (sc.hasNextLine()) {
+					System.out.println("[" + addr + "]get info from client: " + sc.nextLine());
+				}
+
+				System.out.println("[" + addr + "]exit");
+			} catch (IOException e) {
+
+				e.printStackTrace();
+			} finally {
+				try {
+					inputStream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	class OutputThread implements Runnable {
+		private Socket clientSocket;
+
+		public OutputThread(Socket clientSocket) {
+			this.clientSocket = clientSocket;
+		}
+
+		public void run() {
+			InputStream inputStream = null;
+			try {
+				inputStream = clientSocket.getInputStream();
+				String addr = clientSocket.getLocalAddress().toString();
+				System.out.println("[" + addr + "]Knock!Knock!");
+				Scanner sc = new Scanner(inputStream);
+				while (sc.hasNextLine()) {
+					System.out.println("[" + addr + "]get info from client: " + sc.nextLine());
+				}
+
+				System.out.println("[" + addr + "]exit");
+			} catch (IOException e) {
+
+				e.printStackTrace();
+			} finally {
+				try {
+					inputStream.close();
+//				socket.close();
+//				server.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	public static void main(String[] args) {
